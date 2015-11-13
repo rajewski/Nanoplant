@@ -1,10 +1,18 @@
 #Read in the file ignoring the second line of units
+
 header <- scan("Ctrl3_light_ci.csv", nlines=1,sep=",",quote="\"", what=character())
 data <- read.csv("Ctrl3_light_ci.csv", header=F, skip=2,colClasses=c("Date"="character","Time"="character"), col.names=header, sep=",")
+
+file <-"NC3_light_ci.csv"
+seperator<- ","
+header <- scan(file, nlines=1,sep=seperator, quote="\"", what=character())
+data <- read.csv(file, header=F, skip=2,colClasses=c("Date"="character","Time"="character"), col.names=header, sep=seperator)
+units <- scan(file, nlines=1, skip=1, sep=seperator, quote="\"", what=character(), encoding="latin1")
+
 rm(header)
 
 #Convert the two time columns to something that R can understand
-data <- cbind(Time=as.POSIXlt(paste(data$Date, data$Time)), subset(data[c(-1,-2)]))
+data <- cbind(DateTime=as.POSIXlt(paste(data$Date, data$Time)), subset(data[,c(-1,-2)]))
 
 #Create subsets of the data depending on what was recorded
 if(" Light Curve" %in% data$Comment & " CO2 Curve" %in% data$Comment){

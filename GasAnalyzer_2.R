@@ -1,5 +1,5 @@
 #Read in the file ignoring the second line of units
-
+library(data.table)
 #Enter the number of pairs of files
 mpairs <- 2
 
@@ -7,14 +7,30 @@ mpairs <- 2
 controls <- rbind("Ctrl2_light_ci.csv", "Ctrl3_light_ci.csv")
 nanoceria <- rbind("nc2_light_ci.csv", "nc3_light_ci.csv")
 
-measfiles <- cbind(controls, nanoceria)
+#Get the headers from the first file on the list
+header <- scan(controls[1], nlines=1,sep=";",quote="\"", what=character())
+units <- c("yyy-mm-dd hh:mm:ss", scan(measfiles[1,1], nlines=1, skip=1, sep=separ[1,1], what=character(), encoding="latin1")[3:48])
 
-header <- scan("Ctrl3_light_ci.csv", nlines=1,sep=",",quote="\"", what=character())
-data <- read.csv("Ctrl3_light_ci.csv", header=F, skip=2,colClasses=c("Date"="character","Time"="character"), col.names=header, sep=",")
-rm(header)
+#read in all the control files
+l <- lapply(controls, fread, header=F, skip=2, col.names=header, colClasses=c(V1="chracter", V2="character"), encoding="Latin-1", data.table=FALSE)
+data <- rbindlist(l)
 
 #Convert the two time columns to something that R can understand
-data <- cbind(Time=as.POSIXlt(paste(data$Date, data$Time)), subset(data[c(-1,-2)]))
+data$DateTime <- as.POSIXct(paste(data$Date, data$Time))
+data <- within(data, rm(Date))
+data <- within(data, rm(Time))
+
+
+#Potential messy for loop to get the files read into dataframes, but I cant get it to break the two apart into the curves
+for (c in controls){
+  assign(c, fread(c, header=F, skip=2, col.names=header, colClasses=c(V1="chracter", V2="character"), encoding="Latin-1", data.table=FALSE))
+  #Make a sorted matrix to name and define the subsets for later curves
+  Value <- cbind(c("LightCurve","CO2Curve","END"),c(match(" Light Curve", c$Comment),match(" CO2 Curve", c$Comment),dim(c)[1]))
+  Value <- Value[rank(as.numeric(Value[,2])),]
+  assign(Value[1,1], data[Value[1,2]:(as.numeric(Value[2,2])-1),])
+  assign(Value[2,1], data[Value[2,2]:Value[3,2],])
+  rm(Value)
+}
 
 #Create subsets of the data depending on what was recorded
 if(" Light Curve" %in% data$Comment & " CO2 Curve" %in% data$Comment){
