@@ -1,4 +1,14 @@
 #Read in the file ignoring the second line of units
+
+#Enter the number of pairs of files
+mpairs <- 2
+
+#Enter the names of the control and nanoceria files in quotes separated by commas
+controls <- rbind("Ctrl2_light_ci.csv", "Ctrl3_light_ci.csv")
+nanoceria <- rbind("nc2_light_ci.csv", "nc3_light_ci.csv")
+
+measfiles <- cbind(controls, nanoceria)
+
 header <- scan("Ctrl3_light_ci.csv", nlines=1,sep=",",quote="\"", what=character())
 data <- read.csv("Ctrl3_light_ci.csv", header=F, skip=2,colClasses=c("Date"="character","Time"="character"), col.names=header, sep=",")
 rm(header)
