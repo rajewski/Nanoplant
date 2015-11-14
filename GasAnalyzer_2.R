@@ -21,6 +21,10 @@ data$DateTime <- as.POSIXct(paste(data$Date, data$Time))
 data <- within(data, rm(Date))
 data <- within(data, rm(Time))
 
+#Since this is the only unique value for each row, lets make it our key
+data <- data.table(data, key="DateTime")
+
+
 #Add on the names of the sample types and rep numbers
 data <- cbind(data, File = as.vector(rep(sub("_.*$","",allfiles), sapply(lapply(allfiles, fread, skip=1), nrow))))
 data$Type <- substring(data$File,1, nchar(data$File)-1)
@@ -40,6 +44,13 @@ rm(Value)
 #Add in columns to bin the levels of light or CO2
 data$CO2bins <- cut(data$CO2abs,breaks=c(0, 51, 110, 210, 310, 420, 620, 820, 1020), labels=c("50","100", "200", "300", "400", "600", "800", "1000"), include.lowest=TRUE)
 data$PARbin <- cut(data$PARtop, breaks=c(0, 10, 60, 110, 160, 210, 310, 410, 610, 910, 1210, 1610, 2010), labels=c("0","50", "100", "150", "200", "300", "400", "600", "900", "1200", "1600", "2000"), include.lowest=TRUE)
+
+#Code to deal with the stabilization of the PAR at high light
+#Create a table of the values we want to remove
+dat<-rbindlist(by(data[(PARbin ==2000) & (Curve=="LC"),], list(data[(PARbin ==2000) & (Curve=="LC"),]$Rep, data[(PARbin ==2000) & (Curve=="LC"),]$Type), head,-10))
+dat <- data.table(dat, key="DateTime")
+#Use a data.table trick to remove the intersect of these two data tables
+data <-data[!dat]
 
 attach(data)
 
