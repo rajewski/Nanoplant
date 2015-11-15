@@ -14,22 +14,19 @@ rm(nanoceria)
 units <- c("yyyy-mm-dd hh:mm:ss", scan(allfiles[1], nlines=1, skip=1, sep=";", what=character(), encoding="latin1")[3:48])
 
 #read in all the control files
-data <- rbindlist(lapply(allfiles, fread, header=F, skip=2, col.names=scan(allfiles[1], nlines=1,sep=";",quote="\"", what=character()), colClasses=c(V1="POSIXct", V2="POSIXct"), encoding="Latin-1", data.table=FALSE))
+data <- rbindlist(lapply(allfiles, fread, header=FALSE, skip=2, col.names=scan(allfiles[1], nlines=1,sep=";",quote="\"", what=character()), colClasses=c(V1="POSIXct", V2="POSIXct"), encoding="Latin-1", data.table=FALSE))
 
 #Convert the two time columns to something that R can plot
 data$DateTime <- as.POSIXct(paste(data$Date, data$Time))
 data <- within(data, rm(Date))
 data <- within(data, rm(Time))
 
-#Since this is the only unique value for each row, lets make it our key
-data <- data.table(data, key="DateTime")
-
-
 #Add on the names of the sample types and rep numbers
 data <- cbind(data, File = as.vector(rep(sub("_.*$","",allfiles), sapply(lapply(allfiles, fread, skip=1), nrow))))
 data$Type <- substring(data$File,1, nchar(data$File)-1)
 data$Rep <- substring(data$File, nchar(data$File), nchar(data$File))
 data <- within(data, rm(File))
+rm(allfiles)
 
 #Make a sorted matrix to help name and define the subsets for the curves
 Value <- rbind(cbind(rep("LC"), which(data$Comment %in% "Light Curve")), cbind(rep("CC"),which(data$Comment %in% "CO2 Curve")),cbind("END",nrow(data)+1))
@@ -47,10 +44,13 @@ data$PARbin <- cut(data$PARtop, breaks=c(0, 10, 60, 110, 160, 210, 310, 410, 610
 
 #Code to deal with the stabilization of the PAR at high light
 #Create a table of the values we want to remove
-dat<-rbindlist(by(data[(PARbin ==2000) & (Curve=="LC"),], list(data[(PARbin ==2000) & (Curve=="LC"),]$Rep, data[(PARbin ==2000) & (Curve=="LC"),]$Type), head,-10))
+dat<-rbindlist(by(data[(PARbin ==2000) & (Curve=="LC"),], list(data[(PARbin ==2000) & (Curve=="LC"),]$Rep, data[(PARbin ==2000) & (Curve=="LC"),]$Type), head,-6))
 dat <- data.table(dat, key="DateTime")
 #Use a data.table trick to remove the intersect of these two data tables
+#Since this is the only unique value for each row, lets make it our key
+data <- data.table(data, key="DateTime")
 data <-data[!dat]
+rm(dat)
 
 attach(data)
 
@@ -83,7 +83,7 @@ legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x
 #qp vs PAR
 plot(PARtop[Type=="Ctrl" & Curve=="LC"],qP[Type=="Ctrl" & Curve=="LC"], xlab="PAR", ylab="qp", pch=1, col="black", xlim=c(0,2000), ylim=c(0,1))
 par(new=T)
-plot(PARtop[Type=="nc" & Curve=="LC"],qP[Type=="nc" & Curve=="LC"], pch=1, col="red",axes=F, ylab="", xlab="", xlim=c(0,2000), ylim=c(0,1))
+plot(PARtop[Type=="nc" & Curve=="LC"],qP[Type=="nc" & Curve=="LC"], pch=1, col="red",axes=FALSE, ylab="", xlab="", xlim=c(0,2000), ylim=c(0,1))
 title(main="qP vs. PAR")
 legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.2,yjust=0)
 
