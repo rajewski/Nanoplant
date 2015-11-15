@@ -51,9 +51,10 @@ dat <- data.table(dat, key="DateTime")
 data <- data.table(data, key="DateTime")
 data <-data[!dat]
 rm(dat)
-
 attach(data)
 
+
+######Start Graphing!!!
 ##Let's make some plots of the raw data
 #Plot the ci against the assimilation
 plot(ci[Curve=="CC"], A[Curve=="CC"], xlab="Intracellular [CO2]", ylab="Carbon Assimilation", col=factor(Type))
