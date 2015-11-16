@@ -1,5 +1,8 @@
-#Read in the file ignoring the second line of units
+#Lets load some libraries well need later
 library(data.table)
+#prettier graphs can be made with the ggplot2 package
+library(ggplot2)
+library(broom)
 
 #Enter the names of the control and nanoceria files in order in quotes separated by commas
 controls <- rbind("Ctrl1_light_ci.csv","Ctrl2_light_ci.csv", "Ctrl3_light_ci.csv")
@@ -53,6 +56,20 @@ data <-data[!dat]
 rm(dat)
 attach(data)
 
+#Let's just do a quick two-tailed t-test to see if the Fv/Fm is different between the samples
+#The Fv/Fm has the accents around it so that R won't interpret the / as a literal division
+t<-tidy(t.test(`Fv/Fm`[(PARbin=="0") & (!is.na(Yield)) & (Type=="nc")], `Fv/Fm`[(PARbin=="0") & (!is.na(Yield)) & (Type=="Ctrl")]))
+
+#Do a quick boxplot with ggplot of the Fv/Fm
+ggplot(data[(PARbin=="0") & (!is.na(Yield)),], aes(x=Type, y=`Fv/Fm`)) +
+  geom_boxplot(aes(fill=Type)) +
+  ylab("") +
+  xlab(paste("P-value:",as.character(round(t[5],4)))) +
+  ggtitle("Fv/Fm") +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank()) 
+  
 
 ######Start Graphing!!!
 ##Let's make some plots of the raw data
@@ -88,12 +105,9 @@ plot(PARtop[Type=="nc" & Curve=="LC"],qP[Type=="nc" & Curve=="LC"], pch=1, col="
 title(main="qP vs. PAR")
 legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.2,yjust=0)
 
-##Those were great, but now lets start dealing with averaged data
-#Plot the averaged values for the Yield vs. PAR
-with(aggregate(Yield~PARbin*Type, data, mean), plot(as.numeric(levels(PARbin))[PARbin],Yield, xlab="PAR",col=factor(Type)))
-title(main="Yield vs. PAR")
 
-##Instead of calculating stats for every graph, let's make a summary table for light curves
+
+##Instead of calculating stats for every graph, let's make a summary table for light curves and use that for later plotting
 #Add yield
 LCaggr <- cbind(aggregate(Yield~Type*PARbin, data, FUN=mean), YieldSD=aggregate(Yield~Type*PARbin, data, FUN=sd)[,3])
 #Add qP
@@ -112,6 +126,21 @@ LCaggr <- cbind(LCaggr, GH2OSD=aggregate(GH2O~Type*PARbin, data[(Curve=="LC"),],
 #Add n
 LCaggr <- cbind(LCaggr, n=aggregate(Yield~Type*PARbin, data, length)[,3])
 
-#Let's just do a quick two-tailed t-test to see if the Fv/Fm is different between the samples
-library(broom)
-tidy(t.test(`Fv/Fm`[(PARbin=="0") & (!is.na(Yield)) & (Type=="nc")], `Fv/Fm`[(PARbin=="0") & (!is.na(Yield)) & (Type=="Ctrl")]))
+#Since we'll be dealing more with this aggregated data, lets attach the LCaggr dataset instead
+detach(data)
+attach(LCaggr)
+
+
+#This will jitter overlapping error bars
+pd <- position_dodge(20)
+
+#use ggplot to get all these things fine tuned
+ggplot(LCaggr, aes(x=as.numeric(as.character(PARbin)), y=GH2O, colour=Type, group=Type)) +
+  xlab("PAR") +
+  geom_errorbar(aes(ymin=GH2O-(GH2OSD/sqrt(n)), ymax=GH2O+(GH2OSD/sqrt(n))), width=20, position=pd) +
+  geom_point(position=pd) +
+  geom_line(position=pd) +
+  ggtitle("Stomatal Conductance")+
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line("lightgray"),
+        panel.background = element_blank()) 
