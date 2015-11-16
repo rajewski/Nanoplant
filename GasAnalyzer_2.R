@@ -102,5 +102,16 @@ LCaggr <- cbind(LCaggr, qP=aggregate(qP~Type*PARbin, data, mean)[,3], qpSD=aggre
 LCaggr <- cbind(LCaggr, A=aggregate(A~Type*PARbin, data[(Curve=="LC"),], mean)[,3],ASD=aggregate(A~Type*PARbin, data[(Curve=="LC"),], sd)[,3])
 #Add number of A measurements
 LCaggr <- cbind(LCaggr, An=aggregate(A~Type*PARbin, data[(Curve=="LC"),], length)[,3])
+#Add in the Fv/Fm measurement
+#It's measured twice per plant, so the !is.na bit filters it so you don't get duplicates
+LCaggr <- cbind(LCaggr, `Fv/Fm`=aggregate(`Fv/Fm`~Type*PARbin, data[!is.na(Yield)], mean)[,3])
+LCaggr <- cbind(LCaggr, `Fv/FmSD`=aggregate(`Fv/Fm`~Type*PARbin, data[!is.na(Yield)], sd)[,3])
+#Add in the stomatal conductance (GH20)
+LCaggr <- cbind(LCaggr, GH2O=aggregate(GH2O~Type*PARbin, data[(Curve=="LC"),], mean)[,3])
+LCaggr <- cbind(LCaggr, GH2OSD=aggregate(GH2O~Type*PARbin, data[(Curve=="LC"),], sd)[,3])
 #Add n
 LCaggr <- cbind(LCaggr, n=aggregate(Yield~Type*PARbin, data, length)[,3])
+
+#Let's just do a quick two-tailed t-test to see if the Fv/Fm is different between the samples
+library(broom)
+tidy(t.test(`Fv/Fm`[(PARbin=="0") & (!is.na(Yield)) & (Type=="nc")], `Fv/Fm`[(PARbin=="0") & (!is.na(Yield)) & (Type=="Ctrl")]))
