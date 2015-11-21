@@ -1,9 +1,13 @@
-#Read in the file ignoring the second line of units
-library(data.table)
+#Lets load some libraries well need later
+library(data.table) #to organize data better
+library(ggplot2) #to make pretty graphs
+library(broom) #to make tidy stats outputs
+library(lattice) #better organized plots
+library(chron) #work with dates
 
 #Enter the names of the control and nanoceria files in order in quotes separated by commas
-controls <- rbind("Ctrl1_light_ci.csv","Ctrl2_light_ci.csv", "Ctrl3_light_ci.csv")
-nanoceria <- rbind("nc1_light_ci.csv","nc2_light_ci.csv", "nc3_light_ci.csv")
+controls <- rbind("Ctrl1_light_ci.csv","Ctrl2_light_ci.csv", "Ctrl3_light_ci.csv", "Ctrl4_light_ci.csv", "Ctrl5_light_ci.csv", "Ctrl6_light_ci.csv")
+nanoceria <- rbind("NC1_light_ci.csv","NC2_light_ci.csv", "NC3_light_ci.csv", "NC4_light_ci.csv", "NC5_light_ci.csv", "NC6_light_ci.csv")
 
 #Combine Get a piared list of all files and clean up
 allfiles <- rbind(controls, nanoceria)
@@ -32,10 +36,12 @@ rm(allfiles)
 Value <- rbind(cbind(rep("LC"), which(data$Comment %in% "Light Curve")), cbind(rep("CC"),which(data$Comment %in% "CO2 Curve")),cbind("END",nrow(data)+1))
 Value<-Value[sort.list(as.numeric(Value[,2])),]
 
+##Add in what type of curve it is
 #Delete the initial Zero point to get this to align
-#Add in what type of curve it is
 data<-data[-1,]
-data<-cbind(data,Curve = rep(Value[1:12,1],as.vector(as.numeric(Value[-1,2])-as.numeric(Value[1:12,2]))))
+#Use the value matrix to add a column where the curve name is repeated
+#calculate the number of times to repeat by substrcting the positions of the curve names in the data data frame
+data<-cbind(data,Curve = rep(Value[1:(length(Value[,1])-1),1],as.vector(as.numeric(Value[-1,2])-as.numeric(Value[1:(length(Value[,1])-1),2]))))
 rm(Value)
 
 #Add in columns to bin the levels of light or CO2
@@ -53,46 +59,69 @@ data <-data[!dat]
 rm(dat)
 
 attach(data)
+######Start Graphing!!!
+
+#Let's just do a quick two-tailed t-test to see if the Fv/Fm is different between the samples
+#The Fv/Fm has the accents around it so that R won't interpret the / as a literal division
+t<-tidy(t.test(`Fv/Fm`[(PARbin=="0") & (!is.na(Yield)) & (Type=="NC")], `Fv/Fm`[(PARbin=="0") & (!is.na(Yield)) & (Type=="Ctrl")]))
+
+#Do a quick boxplot with ggplot of the Fv/Fm
+ggplot(data[(PARbin=="0") & (!is.na(Yield)),], aes(x=Type, y=`Fv/Fm`)) +
+  geom_boxplot(aes(fill=Type)) +
+  ylab("") +
+  xlab(paste("P-value:",as.character(round(t[5],4)))) +
+  ggtitle("Fv/Fm") +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank()) 
+  
 
 ##Let's make some plots of the raw data
 #Plot the ci against the assimilation
 plot(ci[Curve=="CC"], A[Curve=="CC"], xlab="Intracellular [CO2]", ylab="Carbon Assimilation", col=factor(Type))
-title(main="Carbon Assimilation Curve")
+title(main="Assimilation Curve")
+legend("bottomright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n", x.intersp=.3, y.intersp=.5, yjust=0)
 
-#Plot A vs ci
-plot(ci[Type=="Ctrl" & Curve=="CC"], A[Type=="Ctrl" & Curve=="CC"], xlab="Intracellular [CO2]", ylab="Carbon Assimilation", col="red", ylim=c(0,40), xlim=c(0,750))
-par(new=T)
-plot(ci[Type=="nc" & Curve=="CC"], A[Type=="nc" & Curve=="CC"], xlab="", ylab="", axes=F, col="black", ylim=c(0,40), xlim=c(0,750))
+#Plot PAR vs Assimilation
+plot(PARtop[Curve=="LC"], A[Curve=="LC"], xlab="PAR", ylab="Carbon Assimilation", col=factor(Type))
 title(main="Carbon Assimilation Curve")
-legend("bottomright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.2,yjust=0)
-
-#plot A vs PAR
-plot(PARtop[Type=="Ctrl" & Curve=="LC"],A[Type=="Ctrl" & Curve=="LC"], xlab="PAR", ylab="Carbon Assimilation", pch=1, col="black", xlim=c(0,2000), ylim=c(0,35))
-par(new=T)
-plot(PARtop[Type=="nc" & Curve=="LC"],A[Type=="nc" & Curve=="LC"], pch=1, col="red",axes=F, ylab="", xlab="", xlim=c(0,2000), ylim=c(0,35))
-title(main="Carbon Assimilation Curve")
-legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.2,yjust=0)
+legend("bottomright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.5,yjust=0)
 
 #Plot Yield vs PAR
-plot(PARtop[Type=="Ctrl" & Curve=="LC"],Yield[Type=="Ctrl" & Curve=="LC"], xlab="PAR", ylab="Yield", pch=1, col="black", xlim=c(0,2000), ylim=c(0,.5))
-par(new=T)
-plot(PARtop[Type=="nc" & Curve=="LC"],Yield[Type=="nc" & Curve=="LC"], pch=1, col="red",axes=F, ylab="", xlab="", xlim=c(0,2000), ylim=c(0,.5))
+plot(PARtop[Curve=="LC"], Yield[Curve=="LC"], xlab="PAR", ylab="Yield", col=factor(Type))
 title(main="Yield vs. PAR")
-legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.2,yjust=0)
+legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.5,yjust=0)
 
 #qp vs PAR
-plot(PARtop[Type=="Ctrl" & Curve=="LC"],qP[Type=="Ctrl" & Curve=="LC"], xlab="PAR", ylab="qp", pch=1, col="black", xlim=c(0,2000), ylim=c(0,1))
-par(new=T)
-plot(PARtop[Type=="nc" & Curve=="LC"],qP[Type=="nc" & Curve=="LC"], pch=1, col="red",axes=FALSE, ylab="", xlab="", xlim=c(0,2000), ylim=c(0,1))
+plot(PARtop[Curve=="LC"], qP[Curve=="LC"], xlab="PAR", ylab="qP", col=factor(Type))
 title(main="qP vs. PAR")
-legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.2,yjust=0)
+legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.5,yjust=0)
+
+#GH2O vs PAR
+plot(PARtop[Curve=="LC"], GH2O[Curve=="LC"], xlab="PAR", ylab="GH2O", col=factor(Type))
+title(main="Stomatal Conductance")
+legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.5,yjust=0)
+
+
+#use ggplot to get all these things fine tuned
+#Plot the stomatal conductance
+ggplot(data[Curve=="LC"], aes(x=as.numeric(as.character(PARbin)), y=GH2O, colour=Type, group=Type)) +
+  xlab("PAR") +
+  geom_point(position=pd) +
+  geom_line(position=pd) +
+  facet_grid(.~Rep) +
+  ggtitle("Stomatal Conductance")+
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line("lightgray"),
+        panel.background = element_blank()) 
+
 
 ##Those were great, but now lets start dealing with averaged data
 #Plot the averaged values for the Yield vs. PAR
 with(aggregate(Yield~PARbin*Type, data, mean), plot(as.numeric(levels(PARbin))[PARbin],Yield, xlab="PAR",col=factor(Type)))
 title(main="Yield vs. PAR")
 
-##Instead of calculating stats for every graph, let's make a summary table for light curves
+##Instead of calculating stats for every graph, let's make a summary table for light curves and use that for later plotting
 #Add yield
 LCaggr <- cbind(aggregate(Yield~Type*PARbin, data, FUN=mean), YieldSD=aggregate(Yield~Type*PARbin, data, FUN=sd)[,3])
 #Add qP
@@ -101,5 +130,101 @@ LCaggr <- cbind(LCaggr, qP=aggregate(qP~Type*PARbin, data, mean)[,3], qpSD=aggre
 LCaggr <- cbind(LCaggr, A=aggregate(A~Type*PARbin, data[(Curve=="LC"),], mean)[,3],ASD=aggregate(A~Type*PARbin, data[(Curve=="LC"),], sd)[,3])
 #Add number of A measurements
 LCaggr <- cbind(LCaggr, An=aggregate(A~Type*PARbin, data[(Curve=="LC"),], length)[,3])
+#Add in the Fv/Fm measurement
+#It's measured twice per plant, so the !is.na bit filters it so you don't get duplicates
+LCaggr <- cbind(LCaggr, `Fv/Fm`=aggregate(`Fv/Fm`~Type*PARbin, data[!is.na(Yield)], mean)[,3])
+LCaggr <- cbind(LCaggr, `Fv/FmSD`=aggregate(`Fv/Fm`~Type*PARbin, data[!is.na(Yield)], sd)[,3])
+#Add in the stomatal conductance (GH20)
+LCaggr <- cbind(LCaggr, GH2O=aggregate(GH2O~Type*PARbin, data[(Curve=="LC"),], mean)[,3])
+LCaggr <- cbind(LCaggr, GH2OSD=aggregate(GH2O~Type*PARbin, data[(Curve=="LC"),], sd)[,3])
 #Add n
 LCaggr <- cbind(LCaggr, n=aggregate(Yield~Type*PARbin, data, length)[,3])
+write.csv(LCaggr, file="Light Curve Summary Data.csv", row.names=FALSE)
+#Since we'll be dealing more with this aggregated data, lets attach the LCaggr dataset instead
+detach(data)
+attach(LCaggr)
+
+#This will jitter overlapping error bars
+pd <- position_dodge(20)
+
+#use ggplot to get all these things fine tuned
+#Plot the stomatal conductance
+ggplot(LCaggr, aes(x=as.numeric(as.character(PARbin)), y=GH2O, colour=Type, group=Type)) +
+  xlab("PAR") +
+  geom_errorbar(aes(ymin=GH2O-GH2OSD, ymax=GH2O+GH2OSD), width=20, position=pd) +
+  geom_point(position=pd) +
+  geom_line(position=pd) +
+  facet_grid(.~Rep) +
+  ggtitle("Stomatal Conductance")+
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line("lightgray"),
+        panel.background = element_blank()) 
+
+
+#Let's use lattice to get some nice trellis graphs by rep
+#make a scale for the color that matches
+my.settings <- list(superpose.symbol=list(col=c("black", "red"), fill=c("black", "red")))
+RepAxPAR <- xyplot(A~PARtop|Rep, groups=Type, par.settings=my.settings, auto.key=TRUE, data=data[(Curve=="LC")], main="Assimilation by Rep")
+RepYieldxPAR <- xyplot(Yield~PARtop|Rep, groups=Type, par.settings=my.settings, auto.key=TRUE, data=data[(Curve=="LC")], main="Yield by Rep")
+RepGH2OxPAR <- xyplot(GH2O~PARtop|Rep, groups=Type, par.settings=my.settings, auto.key=TRUE, data=data[(Curve=="LC")], main="Conductance by Rep")
+RepqPxPAR <- xyplot(qP~PARtop|Rep, groups=Type, par.settings=my.settings, auto.key=TRUE, data=data[(Curve=="LC")], main="qP by Rep")
+
+#ok now switch to the aggregated data
+detach(data)
+attach(LCaggr)
+
+TypeGH2OxPAR <- ggplot(LCaggr, aes(x=as.numeric(as.character(PARbin)), y=GH2O, colour=Type, group=Type)) +
+  xlab("PAR") +
+  geom_errorbar(aes(ymin=GH2O-GH2OSD, ymax=GH2O+GH2OSD), width=20, position=pd) +
+  geom_point(position=pd) +
+  geom_line(position=pd) +
+  ggtitle("Stomatal Conductance")+
+  scale_colour_manual(values = c("black","red"))+
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line("lightgray"),
+        panel.background = element_blank()) 
+
+TypeAxPAR <- ggplot(LCaggr, aes(x=as.numeric(as.character(PARbin)), y=A, colour=Type, group=Type)) +
+  xlab("PAR") +
+  ylab("Assimilation") +
+  geom_errorbar(aes(ymin=A-ASD, ymax=A+ASD), width=20, position=pd) +
+  geom_point(position=pd) +
+  geom_line(position=pd) +
+  ggtitle("Assimilation vs PAR")+
+  scale_colour_manual(values = c("black","red"))+
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line("lightgray"),
+        panel.background = element_blank()) 
+
+TypeYieldxPAR <- ggplot(LCaggr, aes(x=as.numeric(as.character(PARbin)), y=Yield, colour=Type, group=Type)) +
+  xlab("PAR") +
+  ylab("Yield") +
+  geom_errorbar(aes(ymin=Yield-YieldSD, ymax=Yield+YieldSD), width=20, position=pd) +
+  geom_point(position=pd) +
+  geom_line(position=pd) +
+  ggtitle("Yield vs PAR")+
+  scale_colour_manual(values = c("black","red"))+
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line("lightgray"),
+        panel.background = element_blank()) 
+
+TypeqPxPAR <- ggplot(LCaggr, aes(x=as.numeric(as.character(PARbin)), y=qP, colour=Type, group=Type)) +
+  xlab("PAR") +
+  ylab("qP") +
+  geom_errorbar(aes(ymin=qP-qpSD, ymax=qP+qpSD), width=20, position=pd) +
+  geom_point(position=pd) +
+  geom_line(position=pd) +
+  ggtitle("qP vs PAR")+
+  scale_colour_manual(values = c("black","red"))+
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_line("lightgray"),
+        panel.background = element_blank()) 
+
+grid.arrange(RepYieldxPAR, TypeYieldxPAR, ncol=2)
+grid.arrange(RepqPxPAR, TypeqPxPAR, ncol=2)
+grid.arrange(RepAxPAR, TypeAxPAR, ncol=2)
+grid.arrange(RepGH2OxPAR, TypeGH2OxPAR, ncol=2)
+
+
+###Example to change color of lattice graphs
+my.settings <- list(superpose.symbol=list(col=c("black", "red"), fill=c("black", "red")))
