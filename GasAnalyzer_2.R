@@ -1,9 +1,21 @@
+<<<<<<< HEAD
+#Read in the file ignoring the second line of units
+library(data.table)
+=======
 #Lets load some libraries well need later
+<<<<<<< HEAD
 library(data.table) #to organize data better
 library(ggplot2) #to make pretty graphs
 library(broom) #to make tidy stats outputs
 library(lattice) #better organized plots
 library(chron) #work with dates
+=======
+library(data.table)
+#prettier graphs can be made with the ggplot2 package
+library(ggplot2)
+library(broom)
+>>>>>>> 8c527ef22acec1bfd79b98eed959d653d0954d8f
+>>>>>>> c9ca5fcabb34efea2c6565047af8e096d6a572aa
 
 #Enter the names of the control and nanoceria files in order in quotes separated by commas
 controls <- rbind("Ctrl1_light_ci.csv","Ctrl2_light_ci.csv", "Ctrl3_light_ci.csv", "Ctrl4_light_ci.csv", "Ctrl5_light_ci.csv", "Ctrl6_light_ci.csv")
@@ -57,7 +69,15 @@ dat <- data.table(dat, key="DateTime")
 data <- data.table(data, key="DateTime")
 data <-data[!dat]
 rm(dat)
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD
+
+attach(data)
+
+=======
+>>>>>>> c9ca5fcabb34efea2c6565047af8e096d6a572aa
 attach(data)
 ######Start Graphing!!!
 
@@ -76,6 +96,11 @@ ggplot(data[(PARbin=="0") & (!is.na(Yield)),], aes(x=Type, y=`Fv/Fm`)) +
         panel.background = element_blank()) 
   
 
+<<<<<<< HEAD
+=======
+######Start Graphing!!!
+>>>>>>> 8c527ef22acec1bfd79b98eed959d653d0954d8f
+>>>>>>> c9ca5fcabb34efea2c6565047af8e096d6a572aa
 ##Let's make some plots of the raw data
 #Plot the ci against the assimilation
 plot(ci[Curve=="CC"], A[Curve=="CC"], xlab="Intracellular [CO2]", ylab="Carbon Assimilation", col=factor(Type))
@@ -97,10 +122,21 @@ plot(PARtop[Curve=="LC"], qP[Curve=="LC"], xlab="PAR", ylab="qP", col=factor(Typ
 title(main="qP vs. PAR")
 legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.5,yjust=0)
 
+<<<<<<< HEAD
 #GH2O vs PAR
 plot(PARtop[Curve=="LC"], GH2O[Curve=="LC"], xlab="PAR", ylab="GH2O", col=factor(Type))
 title(main="Stomatal Conductance")
 legend("topright",c("Control","Nanoceria"),pch=1, col=c("black","red"),bty="n",x.intersp=.3, y.intersp=.5,yjust=0)
+=======
+<<<<<<< HEAD
+##Those were great, but now lets start dealing with averaged data
+#Plot the averaged values for the Yield vs. PAR
+with(aggregate(Yield~PARbin*Type, data, mean), plot(as.numeric(levels(PARbin))[PARbin],Yield, xlab="PAR",col=factor(Type)))
+title(main="Yield vs. PAR")
+
+##Instead of calculating stats for every graph, let's make a summary table for light curves
+=======
+>>>>>>> c9ca5fcabb34efea2c6565047af8e096d6a572aa
 
 
 #use ggplot to get all these things fine tuned
@@ -122,6 +158,7 @@ with(aggregate(Yield~PARbin*Type, data, mean), plot(as.numeric(levels(PARbin))[P
 title(main="Yield vs. PAR")
 
 ##Instead of calculating stats for every graph, let's make a summary table for light curves and use that for later plotting
+>>>>>>> 8c527ef22acec1bfd79b98eed959d653d0954d8f
 #Add yield
 LCaggr <- cbind(aggregate(Yield~Type*PARbin, data, FUN=mean), YieldSD=aggregate(Yield~Type*PARbin, data, FUN=sd)[,3])
 #Add qP
@@ -130,6 +167,10 @@ LCaggr <- cbind(LCaggr, qP=aggregate(qP~Type*PARbin, data, mean)[,3], qpSD=aggre
 LCaggr <- cbind(LCaggr, A=aggregate(A~Type*PARbin, data[(Curve=="LC"),], mean)[,3],ASD=aggregate(A~Type*PARbin, data[(Curve=="LC"),], sd)[,3])
 #Add number of A measurements
 LCaggr <- cbind(LCaggr, An=aggregate(A~Type*PARbin, data[(Curve=="LC"),], length)[,3])
+<<<<<<< HEAD
+#Add n
+LCaggr <- cbind(LCaggr, n=aggregate(Yield~Type*PARbin, data, length)[,3])
+=======
 #Add in the Fv/Fm measurement
 #It's measured twice per plant, so the !is.na bit filters it so you don't get duplicates
 LCaggr <- cbind(LCaggr, `Fv/Fm`=aggregate(`Fv/Fm`~Type*PARbin, data[!is.na(Yield)], mean)[,3])
@@ -159,6 +200,7 @@ ggplot(LCaggr, aes(x=as.numeric(as.character(PARbin)), y=GH2O, colour=Type, grou
   theme(axis.line = element_line(colour = "black"),
         panel.grid.major = element_line("lightgray"),
         panel.background = element_blank()) 
+<<<<<<< HEAD
 
 
 #Let's use lattice to get some nice trellis graphs by rep
@@ -228,3 +270,6 @@ grid.arrange(RepGH2OxPAR, TypeGH2OxPAR, ncol=2)
 
 ###Example to change color of lattice graphs
 my.settings <- list(superpose.symbol=list(col=c("black", "red"), fill=c("black", "red")))
+=======
+>>>>>>> 8c527ef22acec1bfd79b98eed959d653d0954d8f
+>>>>>>> c9ca5fcabb34efea2c6565047af8e096d6a572aa
